@@ -6,7 +6,7 @@ __pycache__/
 # C extensions
 *.so
 
-# Virtual environment
+# Virtual environments
 venv/
 env/
 
@@ -57,6 +57,23 @@ coverage.xml
 # pyenv
 .python-version
 
-# Data files
-data/
+# Ignore data files but keep .gitkeep
+data/*
+!data/.gitkeep
+
+# Ignore everything in app directory except .gitkeep
+app/*
+!app/.gitkeep
+
+# Ignore everything in models directory except .gitkeep
+models/*
+!models/.gitkeep
+
+# Ignore everything in notebooks directory except .gitkeep
+notebooks/*
+!notebooks/.gitkeep
+
+# Ignore everything in docs directory except .gitkeep
+docs/*
+!docs/.gitkeep
 
