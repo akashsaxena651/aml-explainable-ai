@@ -3,6 +3,8 @@ import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 import shap
+import numpy as np
+import altair as alt
 
 # Title and description
 st.title("AML Fraud Detection - Explainable AI")
@@ -10,7 +12,7 @@ st.write("This application predicts whether a transaction is fraudulent and prov
 
 # Load the model
 try:
-    model = joblib.load("models/logistic_regression_2.pkl")
+    model = joblib.load("/Users/kavitasingh/Projects/XAI/models/logistic_regression_2.pkl")
     st.success("Model loaded successfully!")
 except Exception as e:
     st.error(f"Error loading model: {e}")
@@ -69,20 +71,40 @@ if uploaded_file is not None:
                 # Display prediction results
                 st.subheader("Prediction Results")
                 st.write(data[['Time', 'Amount', 'Prediction', 'Probability']])
-
-                # SHAP Analysis
-                st.subheader("SHAP Analysis")
-                st.write("Using SHAP to explain feature contributions:")
-
                 # Create SHAP explainer
                 explainer = shap.LinearExplainer(model, input_df)
                 shap_values = explainer.shap_values(input_df)
 
-                # SHAP Summary Plot
-                st.subheader("SHAP Summary Plot")
-                fig, ax = plt.subplots(figsize=(12, 8))
-                shap.summary_plot(shap_values, input_df, show=False)
-                st.pyplot(fig)
+                # SHAP Analysis
+                st.subheader("SHAP Analysis")
+                st.write("Using SHAP to explain feature contributions:")
+                
+                # Create a summary plot with hover tooltips
+                shap_values_df = pd.DataFrame(shap_values, columns=features)
+                shap_values_df['index'] = shap_values_df.index
+
+                # Melt the DataFrame for easier plotting
+                shap_values_melted = shap_values_df.melt(id_vars=['index'], var_name='Feature', value_name='SHAP Value')
+
+                # Add feature values to the melted DataFrame
+                feature_values_df = input_df.copy()
+                feature_values_df['index'] = feature_values_df.index
+                feature_values_melted = feature_values_df.melt(id_vars=['index'], var_name='Feature', value_name='Feature Value')
+
+                # Merge SHAP values and feature values
+                shap_values_melted = shap_values_melted.merge(feature_values_melted, on=['index', 'Feature'])
+
+                # Plot using Altair for interactivity
+
+                chart = alt.Chart(shap_values_melted).mark_circle(size=60).encode(
+                    x='SHAP Value',
+                    y=alt.Y('Feature', sort=alt.EncodingSortField(field='SHAP Value', op='mean', order='descending')),
+                    color=alt.Color('Feature Value', scale=alt.Scale(scheme='redblue')),
+                    tooltip=['Feature', 'SHAP Value', 'Feature Value']
+                ).interactive()
+
+                st.altair_chart(chart, use_container_width=True)
+
                 # Summary table for high probability fraud alerts
                 st.subheader("High Probability Fraud Alerts Summary")
                 high_prob_fraud = data[data['Probability'] > 0.8]
@@ -116,7 +138,7 @@ if uploaded_file is not None:
                                 st.warning("⚠️ High probability of fraud detected!")
 
                 # Instructions for the user
-                st.info("Click on the transaction links for more details.")
+                st.info("Click on the Alert for more details.")
                 # Make predictions
                 predictions = model.predict(input_df)
                 probabilities = model.predict_proba(input_df)[:, 1]
@@ -124,44 +146,6 @@ if uploaded_file is not None:
                 # Add predictions and probabilities to the DataFrame
                 data['Prediction'] = ['Fraud' if pred == 1 else 'Non-Fraud' for pred in predictions]
                 data['Probability'] = probabilities
-
-                # Display prediction results
-                st.subheader("Prediction Results")
-                st.write(data[['Time', 'Amount', 'Prediction', 'Probability']])
-
-                # SHAP Analysis
-                st.subheader("SHAP Analysis")
-                st.write("Using SHAP to explain feature contributions:")
-
-                # Create SHAP explainer
-                explainer = shap.LinearExplainer(model, input_df)
-                shap_values = explainer.shap_values(input_df)
-
-                # SHAP Summary Plot
-                st.subheader("SHAP Summary Plot")
-                fig, ax = plt.subplots(figsize=(12, 8))
-                shap.summary_plot(shap_values, input_df, show=False)
-                st.pyplot(fig)
-
-                # Generate alerts for fraudulent transactions
-                st.subheader("Fraud Alerts")
-                for index, row in data.iterrows():
-                    if row['Prediction'] == 'Fraud':
-                        # Create a dropdown for detailed information
-                        with st.expander(f"Alert: Transaction {index + 1}"):
-                            st.write(f"Transaction Amount: {row['Amount']}")
-                            st.write(f"Probability of Fraud: {row['Probability']:.2f}")
-                            st.write("Detailed SHAP values:")
-                            shap_values_for_row = shap_values[index]
-                            shap_df = pd.DataFrame({
-                                'Feature': features,
-                                'SHAP Value': shap_values_for_row
-                            }).sort_values(by='SHAP Value', key=abs, ascending=False)
-
-                            st.write(shap_df)
-
-                # Instructions for the user
-                st.info("Click on the transaction links for more details.")
 
             except Exception as e:
                 st.error(f"Error during prediction or explanation: {e}")
