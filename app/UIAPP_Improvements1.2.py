@@ -12,7 +12,7 @@ st.write("This application predicts whether a transaction is fraudulent and prov
 
 # Load the model
 try:
-    model = joblib.load("/Users/kavitasingh/Projects/XAI/models/logistic_regression_2.pkl")
+    model = joblib.load("models/logistic_regression_2.pkl")
     st.success("Model loaded successfully!")
 except Exception as e:
     st.error(f"Error loading model: {e}")
